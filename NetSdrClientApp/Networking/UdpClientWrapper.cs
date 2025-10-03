@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -35,9 +35,9 @@ public class UdpClientWrapper : IUdpClient
                 Console.WriteLine($"Received from {result.RemoteEndPoint}");
             }
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
-            //empty
+            // empty
         }
         catch (Exception ex)
         {
@@ -51,8 +51,9 @@ public class UdpClientWrapper : IUdpClient
         {
             _cts?.Cancel();
             _udpClient?.Close();
-             _cts?.Dispose(); 
-             
+            _cts?.Dispose();
+            _cts = null;
+
             Console.WriteLine("Stopped listening for UDP messages.");
         }
         catch (Exception ex)
@@ -67,6 +68,9 @@ public class UdpClientWrapper : IUdpClient
         {
             _cts?.Cancel();
             _udpClient?.Close();
+            _cts?.Dispose();
+            _cts = null;
+
             Console.WriteLine("Stopped listening for UDP messages.");
         }
         catch (Exception ex)

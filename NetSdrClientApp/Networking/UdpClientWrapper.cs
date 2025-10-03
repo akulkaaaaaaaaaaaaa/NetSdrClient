@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -13,19 +13,19 @@ namespace NetSdrClientApp.Networking
         private readonly IPEndPoint _localEndPoint;
         private CancellationTokenSource? _cts;
         private UdpClient? _udpClient;
-    
+
         public event EventHandler<byte[]>? MessageReceived;
-    
+
         public UdpClientWrapper(int port)
         {
             _localEndPoint = new IPEndPoint(IPAddress.Any, port);
         }
-    
+
         public async Task StartListeningAsync()
         {
             _cts = new CancellationTokenSource();
             Console.WriteLine("Start listening for UDP messages...");
-    
+
             try
             {
                 _udpClient = new UdpClient(_localEndPoint);
@@ -33,26 +33,29 @@ namespace NetSdrClientApp.Networking
                 {
                     UdpReceiveResult result = await _udpClient.ReceiveAsync(_cts.Token);
                     MessageReceived?.Invoke(this, result.Buffer);
-    
                     Console.WriteLine($"Received from {result.RemoteEndPoint}");
                 }
             }
-            catch (OperationCanceledException ex)
+            catch (OperationCanceledException)
             {
-                //empty
+                // Do nothing, normal cancellation
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error receiving message: {ex.Message}");
             }
         }
-    
+
         public void StopListening()
         {
             try
             {
                 _cts?.Cancel();
                 _udpClient?.Close();
+                _cts?.Dispose();  // ✅ Dispose _cts when no longer needed
+                _cts = null;
+                _udpClient = null;
+
                 Console.WriteLine("Stopped listening for UDP messages.");
             }
             catch (Exception ex)
@@ -60,28 +63,17 @@ namespace NetSdrClientApp.Networking
                 Console.WriteLine($"Error while stopping: {ex.Message}");
             }
         }
-    
+
         public void Exit()
         {
-            try
-            {
-                _cts?.Cancel();
-                _udpClient?.Close();
-                Console.WriteLine("Stopped listening for UDP messages.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error while stopping: {ex.Message}");
-            }
+            StopListening(); // reuse StopListening logic
         }
-    
+
         public override int GetHashCode()
         {
             var payload = $"{nameof(UdpClientWrapper)}|{_localEndPoint.Address}|{_localEndPoint.Port}";
-    
             using var md5 = MD5.Create();
             var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(payload));
-    
             return BitConverter.ToInt32(hash, 0);
         }
     }

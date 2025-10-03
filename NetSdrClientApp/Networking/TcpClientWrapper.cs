@@ -12,8 +12,8 @@ namespace NetSdrClientApp.Networking
 {
     public class TcpClientWrapper : ITcpClient
     {
-        private string _host;
-        private int _port;
+        private readonly string _host;
+        private readonly int _port;
         private TcpClient? _tcpClient;
         private NetworkStream? _stream;
         private CancellationTokenSource? _cts;
@@ -49,6 +49,10 @@ namespace NetSdrClientApp.Networking
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to connect: {ex.Message}");
+                _cts?.Dispose();
+                _cts = null;
+                _tcpClient?.Dispose();
+                _tcpClient = null;
             }
         }
 
@@ -77,7 +81,7 @@ namespace NetSdrClientApp.Networking
         {
             if (Connected && _stream != null && _stream.CanWrite)
             {
-                Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+                Console.WriteLine($"Message sent: {string.Join(" ", data.Select(b => Convert.ToString(b, 16)))}");
                 await _stream.WriteAsync(data.AsMemory(), _cts?.Token ?? CancellationToken.None);
             }
             else
@@ -91,7 +95,7 @@ namespace NetSdrClientApp.Networking
             var data = Encoding.UTF8.GetBytes(str);
             if (Connected && _stream != null && _stream.CanWrite)
             {
-                Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+                Console.WriteLine($"Message sent: {string.Join(" ", data.Select(b => Convert.ToString(b, 16)))}");
                 await _stream.WriteAsync(data.AsMemory(), _cts?.Token ?? CancellationToken.None);
             }
             else

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,9 +16,9 @@ namespace NetSdrClientApp.Networking
         private int _port;
         private TcpClient? _tcpClient;
         private NetworkStream? _stream;
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource? _cts;
 
-        public bool Connected => _tcpClient != null && _tcpClient.Connected && _stream != null;
+        public bool Connected => _tcpClient?.Connected == true && _stream != null;
 
         public event EventHandler<byte[]>? MessageReceived;
 
@@ -60,9 +60,11 @@ namespace NetSdrClientApp.Networking
                 _stream?.Close();
                 _tcpClient?.Close();
 
+                _cts?.Dispose();
                 _cts = null;
                 _tcpClient = null;
                 _stream = null;
+
                 Console.WriteLine("Disconnected.");
             }
             else
@@ -76,7 +78,7 @@ namespace NetSdrClientApp.Networking
             if (Connected && _stream != null && _stream.CanWrite)
             {
                 Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-                await _stream.WriteAsync(data, 0, data.Length);
+                await _stream.WriteAsync(data.AsMemory(), _cts?.Token ?? CancellationToken.None);
             }
             else
             {
@@ -90,7 +92,7 @@ namespace NetSdrClientApp.Networking
             if (Connected && _stream != null && _stream.CanWrite)
             {
                 Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-                await _stream.WriteAsync(data, 0, data.Length);
+                await _stream.WriteAsync(data.AsMemory(), _cts?.Token ?? CancellationToken.None);
             }
             else
             {
@@ -104,22 +106,22 @@ namespace NetSdrClientApp.Networking
             {
                 try
                 {
-                    Console.WriteLine($"Starting listening for incomming messages.");
+                    Console.WriteLine($"Starting listening for incoming messages.");
 
-                    while (!_cts.Token.IsCancellationRequested)
+                    while (!_cts?.Token.IsCancellationRequested == true)
                     {
                         byte[] buffer = new byte[8194];
 
-                        int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, _cts.Token);
+                        int bytesRead = await _stream.ReadAsync(buffer.AsMemory(), _cts?.Token ?? CancellationToken.None);
                         if (bytesRead > 0)
                         {
                             MessageReceived?.Invoke(this, buffer.AsSpan(0, bytesRead).ToArray());
                         }
                     }
                 }
-                catch (OperationCanceledException ex)
+                catch (OperationCanceledException)
                 {
-                    //empty
+                    // empty
                 }
                 catch (Exception ex)
                 {
@@ -136,5 +138,4 @@ namespace NetSdrClientApp.Networking
             }
         }
     }
-
 }

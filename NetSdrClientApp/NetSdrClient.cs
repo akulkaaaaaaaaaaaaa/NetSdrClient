@@ -72,7 +72,7 @@ namespace NetSdrClientApp
             await SendTcpRequest(msg);
             IQStarted = true;
 
-            _ = _udpClient.StartListeningAsync();
+            await _udpClient.StartListeningAsync();
         }
 
         public async Task StopIQAsync()
